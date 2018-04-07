@@ -1,0 +1,1 @@
+cmd /k python register_extensions.py

@@ -1,0 +1,4 @@
+local_test.pages
+
+# test recursive blocker
+pages_reference_test.pages

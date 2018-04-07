@@ -1,0 +1,1 @@
+cmd /k python file_ext_drop_handler.py --debug
