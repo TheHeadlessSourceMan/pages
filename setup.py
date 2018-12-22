@@ -6,24 +6,21 @@
 #	and/or
 #	http://pythonwheels.com
 from setuptools import setup, Distribution
+from setuptools.command.install import install
 
 
 class BinaryDistribution(Distribution):
     def is_pure(self):
         return True # return False if there is OS-specific files
 
-# TODO:
-# from distutils import core
-# from distutils.command.install import install
-# ...
-# class my_install(install):
-    # def run(self):
-        # install.run(self)
-        # # Custom stuff here
-        # # distutils.command.install actually has some nice helper methods
-        # # and interfaces. I strongly suggest reading the docstrings.
-# ...
-# distutils.core.setup(..., cmdclass={'install': my_install})
+
+class PostInstallCommand(install):
+	def run(self):
+		install.run(self)
+		import subprocess
+		print 'Registering file extensions...'
+		subprocess.call(['python', 'register_extensions.py'])
+
 
 if __name__ == '__main__':
 	import sys
@@ -39,4 +36,6 @@ if __name__ == '__main__':
 	}
 	package_dir={name:here}
 	distclass=BinaryDistribution
-	setup(name=name,version=version,description=description,packages=packages,package_dir=package_dir,package_data=package_data,distclass=distclass)
+	setup(name=name,version=version,description=description,packages=packages,
+		package_dir=package_dir,package_data=package_data,distclass=distclass,
+		cmdclass={'install':PostInstallCommand})

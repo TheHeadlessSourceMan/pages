@@ -1,40 +1,50 @@
-import os,glob
+#!/usr/bin/env
+# -*- coding: utf-8 -*-
+"""
+A file format to open a set of webpages all at the same time
+"""
+import os
+import glob
+
 
 # ========= format info for pyformatgenie =========
 try:
 	import pyformatgenie
 	guid='{27e64577-726f-4488-9aa9-aaa5960d0092}'
 	pfg=pyformatgenie.PyFormatGenie()
-	if pfg.format(guid)==None: # is the guid already registered?
+	if pfg.format(guid) is None: # is the guid already registered?
 		# did not have the format registered, so do so now
-		format=pfg.addFormat(
+		pfgFormat=pfg.addFormat(
 			guid, # registering the same id
 			filetypeImport='pages', # the name of this module
 			filetypeClass='Pages', # the name of the class that represents an open file
 			name='pagesFile',
 			description='a list of webpages to be opened simultaneously',
 			dataFamilies=[],
-			iconLocation=os.path.abspath(__file__).rsplit(os.sep,1)[0]+os.sep+'pages.ico', # the icon is relative to this location
+			iconLocation=os.path.abspath(__file__).rsplit(os.sep,1)[0]+os.sep+'pages.ico',
+				 # the icon is relative to this location
 			filenamePatterns=['*.pages','*.urls','*.links','*.url'],
-			mimeTypes=['wwwserver/redirection','application/internet-shortcut','application/x-url','message/external-body','text/url','text/x-url'],
-			magicNumber=None) # the magic number would be the same as a zip file, and therefore, not deterministic
+			mimeTypes=['wwwserver/redirection','application/internet-shortcut',
+				'application/x-url','message/external-body','text/url','text/x-url'],
+			magicNumber=None) # the magic number would be the same as a zip file,
+								# and therefore, not deterministic
 		# --- actions ---
-		format.addAction('browse',objName='browseAll')
+		pfgFormat.addAction('browse',objName='browseAll')
 		# and the most important part...
 		pfg.save()
 except ImportError,e:
 	# pyformatgenie is not installed (yet?). Continue with whatever you came here for.
 	pass
 
-	
-class Visited:
+
+class Visited(object):
 	"""
 	Wrap an array in an object to make it globally mutable
 	"""
 	def __init__(self):
 		self.visited=[]
 
-		
+
 def fileUrlToPath(filename):
 	"""
 	convert any filename (including those that start with file://)
@@ -48,33 +58,37 @@ def fileUrlToPath(filename):
 					filename[1]=':'
 				filename=filename.replace('/',os.sep)
 	return os.path.abspath(filename)
-		
-		
+
+
 def pages(filename,allowGlob=True,visitedPages=None):
 	"""
-	filename can be:
+	A file format to open a set of webpages all at the same time
+
+	:param filename: can be:
 		.pages, .urls, .links file
 		.url file
 		any browseable file
 		any browseable url
 		a filename including glob wildcards (eg *.url)
 		an array of any of that stuff
-		
-	allowGlob - enable/disable glob wildcards
-		
-	visitedPages - no need to set this.  It is only used to make sure
+
+	:param allowGlob: enable/disable glob wildcards
+
+	:param visitedPages: no need to set this.  It is only used to make sure
 		we don't get in an infinite loop or bring up a bunch of the same page.
 	"""
 	ret=[]
-	if visitedPages==None:
+	if visitedPages is None:
 		visitedPages=Visited()
-	if type(filename)==list: # open each element in a list
+	if hasattr(filename,"__iter__") and not isinstance(filename,basestring):
+		# open each element in a list
 		for p in filename:
 			ret.extend(pages(p,allowGlob=allowGlob,visitedPages=visitedPages))
 		return ret
 	filename=fileUrlToPath(filename)
 	if allowGlob: # split out glob expressions
-		for name in glob.glob(unicode(filename)): # (casting to unicode allows glob to return unicode filenames)
+		for name in glob.glob(unicode(filename)):
+			# NOTE: (casting to unicode allows glob to return unicode filenames)
 			ret.extend(pages(name,allowGlob=False,visitedPages=visitedPages))
 	else: # read an individual file
 		filename=os.path.abspath(filename)
@@ -117,13 +131,13 @@ def isBrowserRunning(browser='firefox'):
 	#print 'ERR'
 	#print err
 	return out.startswith('Handles')
-	
+
 def browseAll(pages,browser='"c:\\Program Files\\Mozilla Firefox\\firefox.exe"',newWindow=True):
 	"""
 	browse one or more pages
 	"""
 	import subprocess
-	if type(pages)!=list:
+	if not hasattr(pages,"__iter__") or isinstance(pages,basestring):
 		pages=[pages]
 	if len(pages)<1:
 		return
@@ -132,21 +146,21 @@ def browseAll(pages,browser='"c:\\Program Files\\Mozilla Firefox\\firefox.exe"',
 			cmd=browser+' -new-window "'+pages[0]+'"'
 		else: # if there are multiple urls, ff will open them all in a new window
 			cmd=browser+' '+(' '.join(['"'+url+'"' for url in pages]))
-		p=subprocess.Popen(cmd)
+		_=subprocess.Popen(cmd)
 	else:
 		# need to run each as individual command
 		for url in pages:
 			cmd=browser+' "'+url+'"'
-			p=subprocess.Popen(cmd)
-	
-class Pages:
+			_=subprocess.Popen(cmd)
+
+class Pages(object):
 	"""
 	a .pages, .urls, .links file is simply a list of urls
 	(lines beginning with # are comments)
-	
+
 	The power of this is that you can open a browser with
 	several related pages all at once!
-	
+
 	Some sample urls that work:
 		https://www.google.com
 		file:///home/~zabrowski/www/page.html
@@ -158,23 +172,23 @@ class Pages:
 	def __init__(self,filename=None):
 		self.filename=None
 		self.allLines=[]
-		if filename!=None:
+		if filename is not None:
 			self.load(filename)
-			
+
 	def load(self,filename,append=False):
 		"""
 		load a .pages, .urls, .links file
-		
+
 		you can choose to append or overwrite exsiting urls
 		"""
 		self.filename=fileUrlToPath(filename)
-		if append==False:
+		if not append:
 			self.allLines=[]
 		f=open(filename,'rb')
 		for line in f:
 			line=line.strip()
 			self.allLines.append(line)
-				
+
 	def save(self,filename):
 		"""
 		save this as a .pages file
@@ -184,23 +198,23 @@ class Pages:
 			f.write(p)
 			f.write('\n')
 		f.close()
-		
+
 	def pages(self,visitedPages=None):
 		"""
 		gets a list of all pages that will be visited by this file
-		
+
 		visitedPages - no need to set this.  It is only used to make sure
 			we don't get in an infinite loop or bring up a bunch of the same page.
 		"""
-		if visitedPages==None:
+		if visitedPages is None:
 			visitedPages=Visited()
-		#if self.filename!=None:
+		#if self.filename is not None:
 		#	if self.filename in visitedPages:
 		#		return []
 		#	visitedPages.append(self)
 		ret=[]
 		for p in self.allLines:
-			if len(p)==0 or p[1]=='#':
+			if not p or p[1]=='#':
 				continue
 			protoidx=p.find('://')
 			if protoidx<3 or protoidx>9:
@@ -213,11 +227,11 @@ class Pages:
 				ret.append(p)
 				visitedPages.visited.append(p)
 		return ret
-		
+
 	def add(self,url):
 		"""
 		add a new url to the pages
-		
+
 		NOTE: This can be:
 			a proper url
 			a local file
@@ -225,14 +239,14 @@ class Pages:
 			a .url file (windows internet shortcut)
 		"""
 		self.allLines.append(url)
-		
+
 	def browseAll(self,browser='"c:\\Program Files\\Mozilla Firefox\\firefox.exe"',newWindow=True):
 		"""
 		open all urls in a browser
 		"""
 		browseAll(self.pages(),browser,newWindow)
-		
-			
+
+
 if __name__ == '__main__':
 	import sys
 	# Use the Psyco python accelerator if available

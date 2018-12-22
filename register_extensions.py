@@ -25,7 +25,7 @@ def _register(extension,icon=None,verbs={},description=None,shortcutOverlay=Fals
 			winreg.DeleteKey(key,'IsShortcut')
 		except Exception:
 			pass
-	if len(verbs)>0:
+	if verbs:
 		subkey=winreg.CreateKeyEx(key,'Shell')
 		for name,commandline in verbs.items():
 			shortname=name.replace(' ','')
@@ -34,7 +34,7 @@ def _register(extension,icon=None,verbs={},description=None,shortcutOverlay=Fals
 				winreg.SetValue(verbKey,shortname,winreg.REG_SZ,name)
 			winreg.CreateKeyEx(verbKey,'command')
 			winreg.SetValue(verbKey,'command',winreg.REG_SZ,commandline)
-	if len(shellExtensions)>0:
+	if shellExtensions:
 		subkey=winreg.CreateKeyEx(key,'ShellEx')
 		for typename,clsid in shellExtensions.items():
 			winreg.CreateKeyEx(subkey,typename)
